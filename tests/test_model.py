@@ -27,6 +27,7 @@ def test_children_describe_without_following_links(f):
     root = {n.name: n for n in M.children(f)}
     assert root["scalars"].kind == "group" and root["dtype_t"].kind == "datatype"
     assert root["strings"].dtype == "str utf-8 vlen" and root["labels"].dtype == "str ascii [4]"
+    assert (root["sparse_csr"].shape, root["sparse_csr"].dtype) == (CSR.shape, "sparse csr float32")
     assert M.node(f, "/").kind == "group" and M.node(f, "/links/soft").kind == "soft"
 
 

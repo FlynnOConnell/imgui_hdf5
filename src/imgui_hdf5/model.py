@@ -49,7 +49,8 @@ def describe(group: h5py.Group, name: str, path: str) -> Node:
         return Node(path, "external", target=f"{link.filename}:{link.path}")
     obj = group[name]
     if isinstance(obj, h5py.Group):
-        return Node(path, "group")
+        sp = sparse(obj)
+        return Node(path, "group", sp.shape, f"sparse {sp.format} {sp.dtype}") if sp else Node(path, "group")
     if isinstance(obj, h5py.Dataset):
         return Node(path, "dataset", obj.shape, fmt_dtype(obj.dtype))
     return Node(path, "datatype", dtype=fmt_dtype(obj.dtype))
