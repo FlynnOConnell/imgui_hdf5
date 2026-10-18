@@ -15,7 +15,7 @@ import numpy as np
 LIMIT_READ = 64 * 2**20  # bytes read without asking first
 MAX_POINTS = 4000  # points per line; a longer line is drawn as the min and max of each bin
 MAX_LINE_READ = 2**22  # samples read for one line view; a wider view reads every k-th sample
-MAX_PIXELS = 1024  # samples per image side; a larger view reads every k-th row and column
+MAX_PIXELS = 512  # samples per image side; a larger view reads every k-th row and column
 
 
 @dataclass
@@ -154,6 +154,8 @@ def fmt_value(value) -> str:
         return "(empty)"
     if isinstance(value, bytes):
         return value.decode("utf-8", "replace")
+    if isinstance(value, (float, np.floating)):
+        return f"{value:.6g}"
     if isinstance(value, np.ndarray):
         if value.dtype.kind in "SO" and value.size:
             value = np.vectorize(lambda v: v.decode("utf-8", "replace") if isinstance(v, bytes) else v, otypes=[object])(value)
