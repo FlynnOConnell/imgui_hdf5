@@ -5,6 +5,7 @@ and reads of only the part on screen.
 
 import math
 import posixpath
+import re
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
@@ -56,9 +57,14 @@ def describe(group: h5py.Group, name: str, path: str) -> Node:
     return Node(path, "datatype", dtype=fmt_dtype(obj.dtype))
 
 
+def natural(name: str) -> list:
+    """Sort key putting cell_2 before cell_10."""
+    return [(0, int(part), "") if part.isdigit() else (1, 0, part.lower()) for part in re.split(r"(\d+)", name)]
+
+
 def children(f: h5py.File, path: str = "/") -> list[Node]:
     group = f[path]
-    return [describe(group, name, posixpath.join(path, name)) for name in group]
+    return [describe(group, name, posixpath.join(path, name)) for name in sorted(group, key=natural)]
 
 
 def node(f: h5py.File, path: str) -> Node:

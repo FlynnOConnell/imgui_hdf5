@@ -31,6 +31,14 @@ def test_children_describe_without_following_links(f):
     assert M.node(f, "/").kind == "group" and M.node(f, "/links/soft").kind == "soft"
 
 
+def test_children_in_natural_order(tmp_path):
+    with h5py.File(tmp_path / "n.h5", "w") as f:
+        for name in ("cell_10", "cell_2", "Cell_1", "b", "a10b", "a9b"):
+            f[name] = 0
+    with M.open_file(str(tmp_path / "n.h5")) as f:
+        assert [n.name for n in M.children(f)] == ["a9b", "a10b", "b", "Cell_1", "cell_2", "cell_10"]
+
+
 def test_walk_lists_every_link_once_and_survives_a_cycle(f):
     paths = M.walk(f)
     assert len(paths) == len(set(paths))
