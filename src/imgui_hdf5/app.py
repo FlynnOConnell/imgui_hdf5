@@ -83,7 +83,12 @@ class App:
         self.path, self.file, self.tree, self.page = "", None, None, Page()
 
     def on_drop(self, window, count: int, paths) -> None:
-        self.dropped.extend(paths[i].decode("utf-8", "replace") for i in range(count))
+        # under XWayland a drop can deliver other data (e.g. the clipboard's text); keep only existing files
+        items = [paths[i].decode("utf-8", "replace") for i in range(count)]
+        files = [item for item in items if Path(item).is_file()]
+        self.dropped.extend(files)
+        if items and not files:
+            self.error = "The drop did not contain a file path. Type the path instead."
 
     def install_drop(self) -> None:
         """GLFW's drop callback on hello_imgui's window, through imgui-bundle's own libglfw: hello_imgui has no drop event."""
