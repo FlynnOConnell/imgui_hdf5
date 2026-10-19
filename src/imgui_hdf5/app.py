@@ -1,16 +1,14 @@
 """
 The window `imgui-hdf5` opens: the file's tree in a rail on the left, the selected node's page on the right. Files
-open read-only, from the command line, the File menu (imgui_data_loader's dialog) or by dropping one on the window.
+open read-only, from the command line, or the File menu (imgui_data_loader's dialog).
 With imgui_debugger installed (the debug extra), a Debug menu opens a live inspector on the window's state.
 """
 
 import argparse
-import ctypes
 import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
-import imgui_bundle
 from imgui_bundle import hello_imgui, imgui, immapp, implot
 from imgui_data_loader import FileDialog, FileDialogConfig
 
@@ -33,8 +31,6 @@ IMPLOT_PADDINGS = (
     "plot_padding", "label_padding", "legend_padding", "legend_inner_padding", "legend_spacing",
     "mouse_pos_padding", "annotation_padding", "major_tick_len", "minor_tick_len",
 )
-GLFW_LIBRARIES = ("libglfw.so.3", "libglfw.so", "libglfw.3.dylib", "libglfw.dylib", "glfw3.dll")
-DROP_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p))
 
 
 class App:
@@ -46,8 +42,6 @@ class App:
         self.tree: Optional[Tree] = None
         self.page = Page()
         self.error = ""
-        self.dropped: list[str] = []
-        self.drop_callback = None  # kept so ctypes does not free it
         self.show_dialog = False
         self.typed = ""
         self.dialog = FileDialog(FileDialogConfig(
@@ -81,30 +75,6 @@ class App:
         if self.file is not None:
             self.file.close()
         self.path, self.file, self.tree, self.page = "", None, None, Page()
-
-    def on_drop(self, window, count: int, paths) -> None:
-        # under XWayland a drop can deliver other data (e.g. the clipboard's text); keep only existing files
-        items = [paths[i].decode("utf-8", "replace") for i in range(count)]
-        files = [item for item in items if Path(item).is_file()]
-        self.dropped.extend(files)
-        if items and not files:
-            self.error = "The drop did not contain a file path. Type the path instead."
-
-    def install_drop(self) -> None:
-        """GLFW's drop callback on hello_imgui's window, through imgui-bundle's own libglfw: hello_imgui has no drop event."""
-        address = hello_imgui.get_glfw_window_address() if hasattr(hello_imgui, "get_glfw_window_address") else 0
-        folder = Path(imgui_bundle.__file__).parent
-        library = next((folder / name for name in GLFW_LIBRARIES if (folder / name).exists()), None)
-        if not address or library is None:
-            return
-        try:
-            glfw = ctypes.CDLL(str(library))
-            glfw.glfwSetDropCallback.argtypes = [ctypes.c_void_p, DROP_CALLBACK]
-            glfw.glfwSetDropCallback.restype = ctypes.c_void_p
-            self.drop_callback = DROP_CALLBACK(self.on_drop)
-            glfw.glfwSetDropCallback(ctypes.c_void_p(address), self.drop_callback)
-        except (OSError, AttributeError):
-            pass
 
     # ------------------------------------------------------------------
     # scale
@@ -148,9 +118,6 @@ class App:
     def gui(self) -> None:
         self.scale_keys()
         self.apply_scale()
-        if self.dropped:
-            self.open(self.dropped[-1])
-            self.dropped.clear()
         em = imgui.get_font_size()
         rail = min(max(0.3 * imgui.get_content_region_avail().x, 20 * em), WIDTH_RAIL_EM * em)
         if imgui.begin_child("rail", imgui.ImVec2(rail, 0), imgui.ChildFlags_.borders | imgui.ChildFlags_.resize_x):
@@ -215,8 +182,6 @@ class App:
             imgui.text_disabled(str(Path(path).parent))
         if not recent:
             imgui.text_disabled("none")
-        imgui.spacing()
-        imgui.text_disabled("Or drop a file on the window.")
 
     def draw_rail(self) -> None:
         imgui.text_colored(P.ACCENT, TITLE_WINDOW)
@@ -262,7 +227,6 @@ def runner_params(app: App) -> hello_imgui.RunnerParams:
     params.ini_folder_type = hello_imgui.IniFolderType.app_user_config_folder
     params.callbacks.show_gui = app.gui
     params.callbacks.show_menus = app.draw_menus
-    params.callbacks.post_init = app.install_drop
     params.callbacks.default_icon_font = hello_imgui.DefaultIconFont.font_awesome6
     return params
 

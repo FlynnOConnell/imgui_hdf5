@@ -32,8 +32,8 @@ The `debug` extra adds [imgui_debugger](https://github.com/FlynnOConnell/imgui_d
 
 ## Use
 
-- Open a file from the command line, File > Open, File > Open recent, or by dropping it on the window. Files open
-  read-only. Recent files are kept in `~/.imgui_hdf5/settings.json`.
+- Open a file from the command line (`imgui-hdf5 path/to/file.h5`), File > Open (type a path) or File > Open
+  recent. Files open read-only. Recent files are kept in `~/.imgui_hdf5/settings.json`.
 - The tree on the left lists groups and datasets with their shape and dtype; groups are read when opened. The filter
   box matches on the path. Soft and external links are listed, not followed; a soft link's page has Go to target.
 - The page on the right shows the node's attributes, the dataset's chunks, compression and size on disk and in

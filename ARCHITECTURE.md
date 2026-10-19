@@ -39,8 +39,8 @@ asks first past `LIMIT_READ` (64 MiB).
 - A strided read of a chunked, compressed dataset still decompresses every chunk it touches; an overview of a large
   compressed 2-D dataset is slow once, then cached.
 - The list clipper calls `step()` more than once a frame with different ranges; each step has its own cache entry.
-- hello_imgui has no drop event. `App.install_drop` sets GLFW's drop callback through imgui-bundle's own libglfw
-  (the native module links it dynamically, so it is the same GLFW) on `get_glfw_window_address()`.
+- No drag and drop: imgui-bundle's GLFW is X11 only, and under XWayland a drop can deliver the clipboard's text
+  instead of the file's path.
 - `group.get(name, getlink=True)` reads a link without following it; `group[name]` follows soft links. `walk`
   enters only hard links and tracks object ids, so a group linked into itself is entered once.
 - h5py reads variable-length strings as bytes; `fmt_value` decodes them.
