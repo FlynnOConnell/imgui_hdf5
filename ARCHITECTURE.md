@@ -16,6 +16,8 @@
   function per view kind.
 - `plotting.py`: colors, `spec`, plot flags, colormap names.
 - `widgets.py`: `help_mark`, `tooltip`, `cell` (clipped text with the rest in a tooltip), `key_values`.
+- `desktop.py`: `--install-desktop`: a `.desktop` entry (Exec is the running `imgui-hdf5`, `%f` for Open with) and
+  an SVG icon under `$XDG_DATA_HOME`.
 - `config.py`: `~/.imgui_hdf5/settings.json`: the UI scale and recent files.
 
 The hard dependencies are imgui-bundle, numpy, h5py and imgui_data_loader. imgui_debugger is optional, imported in a

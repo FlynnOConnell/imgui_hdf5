@@ -27,6 +27,13 @@ uv venv -p 3.12 && uv pip install -e ".[dev]"
 imgui-hdf5 path/to/file.h5
 ```
 
+In the app menu and a file manager's Open with (Linux):
+
+```bash
+uv tool install git+https://github.com/FlynnOConnell/imgui_hdf5
+imgui-hdf5 --install-desktop
+```
+
 Dependencies: `imgui-bundle`, `numpy`, `h5py` and [imgui_data_loader](https://github.com/FlynnOConnell/imgui_data_loader).
 The `debug` extra adds [imgui_debugger](https://github.com/FlynnOConnell/imgui_debugger) and with it a Debug menu.
 

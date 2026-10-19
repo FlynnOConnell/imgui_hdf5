@@ -243,7 +243,14 @@ def run(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(prog="imgui-hdf5", description="View an HDF5 file, read-only.")
     parser.add_argument("path", nargs="?", default="", help=".h5 / .hdf5 file to open")
     parser.add_argument("--scale", type=float, default=0.0, help="UI scale, e.g. 2 on a 2x HiDPI panel (default: saved, then detected)")
+    parser.add_argument("--install-desktop", action="store_true", help="add imgui_hdf5 to the app menu and Open with, then exit")
     args = parser.parse_args(argv)
+    if args.install_desktop:
+        from imgui_hdf5 import desktop
+
+        for written in desktop.install():
+            print(written)
+        return
     app = App(path=args.path, scale=config.ui_scale(args.scale))
     if args.path and app.file is None:
         print(app.error, file=sys.stderr)

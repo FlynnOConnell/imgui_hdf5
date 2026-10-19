@@ -25,3 +25,13 @@ def test_recent_newest_first_without_duplicates(tmp_path, monkeypatch):
     assert len(config.recent()) == config.MAX_RECENT
     config.save({"ui_scale": 2})
     assert config.recent()[0] == str(tmp_path / "19.h5")
+
+
+def test_install_desktop(tmp_path, monkeypatch):
+    from imgui_hdf5 import desktop
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    written = desktop.install("/opt/bin/imgui-hdf5")
+    assert [p.name for p in written] == ["imgui-hdf5.desktop", "imgui-hdf5.svg"]
+    text = written[0].read_text()
+    assert 'Exec="/opt/bin/imgui-hdf5" %f' in text and "MimeType=application/x-hdf;" in text
