@@ -6,15 +6,13 @@ With imgui_debugger installed (the debug extra), a Debug menu opens a live inspe
 
 import argparse
 import ctypes
-import shutil
 import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
 import imgui_bundle
 from imgui_bundle import hello_imgui, imgui, immapp, implot
-from imgui_bundle import icons_fontawesome_6 as fa
-from imgui_data_loader import ButtonSpec, FileDialog, FileDialogConfig, FileType, PickKind
+from imgui_data_loader import FileDialog, FileDialogConfig
 
 from imgui_hdf5 import __version__, config
 from imgui_hdf5 import model as M
@@ -35,14 +33,8 @@ IMPLOT_PADDINGS = (
     "plot_padding", "label_padding", "legend_padding", "legend_inner_padding", "legend_spacing",
     "mouse_pos_padding", "annotation_padding", "major_tick_len", "minor_tick_len",
 )
-FILETYPES = [FileType("HDF5", "*.h5 *.hdf5 *.hdf *.he5 *.nc *.h5ad"), FileType("All files", "*")]
 GLFW_LIBRARIES = ("libglfw.so.3", "libglfw.so", "libglfw.3.dylib", "libglfw.dylib", "glfw3.dll")
 DROP_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p))
-PICKERS = ("zenity", "kdialog", "matedialog", "qarma")  # portable_file_dialogs on Linux runs one of these
-
-
-def has_picker() -> bool:
-    return not sys.platform.startswith("linux") or any(shutil.which(name) for name in PICKERS)
 
 
 class App:
@@ -58,11 +50,10 @@ class App:
         self.drop_callback = None  # kept so ctypes does not free it
         self.show_dialog = False
         self.typed = ""
-        self.picker = has_picker()
         self.dialog = FileDialog(FileDialogConfig(
             title="Open an HDF5 file",
             subtitle="Files open read-only.",
-            buttons=[ButtonSpec("Open file", PickKind.OPEN_FILE, icon=fa.ICON_FA_FOLDER_OPEN, filetypes=FILETYPES)],
+            buttons=[],
             body_draw=self.draw_dialog_body,
             show_options_button=False,
             show_quit_button=False,
@@ -84,7 +75,6 @@ class App:
             return
         self.close()
         self.path, self.file, self.tree, self.page, self.error = path, f, Tree(f), Page(), ""
-        self.dialog.config.default_dir = str(Path(path).resolve().parent)
         config.add_recent(path)
 
     def close(self) -> None:
@@ -175,10 +165,6 @@ class App:
             _, self.show_dialog = imgui.begin("Open file", True)
             self.dialog.render()
             imgui.end()
-        result = self.dialog.take_result()
-        if result:
-            self.open(result.path)
-            self.show_dialog = False
         if self.tools:
             self.tools.render()
 
@@ -204,8 +190,6 @@ class App:
             self.tools.draw_menu()
 
     def draw_dialog_body(self) -> None:
-        if not self.picker:
-            imgui.text_colored(P.WARN, "No file picker found. Install zenity or kdialog, or type a path.")
         imgui.separator_text("Path")
         imgui.set_next_item_width(-5 * imgui.get_font_size())
         entered, self.typed = imgui.input_text_with_hint(
