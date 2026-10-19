@@ -2,7 +2,8 @@
 
 ## Modules
 
-- `app.py`: `App`, the window. The rail on the left holds the file name, the tree and the text size slider; the page
+- `app.py`: `App`, the window. The rail on the left holds the file name, the tree and the text size slider; it fits the tree
+  (at most half the window) until the splitter is dragged, and a double-click on the splitter fits it again; the page
   on the right is `Page.draw`, or imgui_data_loader's `FileDialog` (a path field and recent files in its body slot, no picker buttons) when no file
   is open. File > Open shows the same dialog in a window. The menu bar has File and, when imgui_debugger is
   installed (the `debug` extra), its `DebugTools`. `run(argv)` is the `imgui-hdf5` entry point.

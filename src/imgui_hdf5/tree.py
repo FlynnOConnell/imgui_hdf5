@@ -13,7 +13,7 @@ from imgui_hdf5 import plotting as P
 from imgui_hdf5.widgets import tooltip
 
 TREE_FLAGS = (
-    imgui.TableFlags_.row_bg | imgui.TableFlags_.borders_v | imgui.TableFlags_.resizable | imgui.TableFlags_.scroll_y
+    imgui.TableFlags_.row_bg | imgui.TableFlags_.borders_v | imgui.TableFlags_.scroll_x | imgui.TableFlags_.scroll_y
     | imgui.TableFlags_.no_borders_in_body
 )
 NODE_FLAGS = (
@@ -35,6 +35,9 @@ class Tree:
         self.nodes: dict[str, M.Node] = {}
         self.paths: Optional[list[str]] = None  # every path, walked on the first filter
         self.kept: Optional[set[str]] = None
+        self.width = 0.0  # what the drawn rows need, measured each frame, for sizing the rail
+        self.widths = [0.0, 0.0, 0.0]
+        self.x0 = 0.0
 
     def children(self, path: str) -> list[M.Node]:
         if path not in self.cache:
@@ -75,23 +78,30 @@ class Tree:
             self.set_filter(text)
         if self.kept is not None:
             imgui.text_disabled(f"{len(self.kept)} matching" if self.kept else "no match")
-        em = imgui.get_font_size()
         if not imgui.begin_table("##tree", 3, TREE_FLAGS, imgui.ImVec2(0, 0)):
             return
         imgui.table_setup_scroll_freeze(0, 1)
-        imgui.table_setup_column("name", imgui.TableColumnFlags_.no_hide)
-        imgui.table_setup_column("shape", imgui.TableColumnFlags_.width_fixed, 7 * em)
-        imgui.table_setup_column("dtype", imgui.TableColumnFlags_.width_fixed, 6 * em)
+        # columns fit their contents every frame, so names are never cut; a narrow rail scrolls sideways instead
+        imgui.table_setup_column("name", imgui.TableColumnFlags_.no_hide | imgui.TableColumnFlags_.width_fixed)
+        imgui.table_setup_column("shape", imgui.TableColumnFlags_.width_fixed)
+        imgui.table_setup_column("dtype", imgui.TableColumnFlags_.width_fixed)
         imgui.table_headers_row()
         # filtered rows open their own state, so clearing the filter leaves the tree as it was
         imgui.push_id("filtered" if self.kept is not None else "tree")
+        self.widths = [0.0, 0.0, 0.0]
         self.row(self.node("/"))
         imgui.pop_id()
         imgui.end_table()
+        style = imgui.get_style()
+        self.width = sum(self.widths) + 6 * style.cell_padding.x + style.scrollbar_size
 
     def row(self, n: M.Node) -> None:
         imgui.table_next_row()
         imgui.table_next_column()
+        if n.path == "/":
+            self.x0 = imgui.get_cursor_screen_pos().x
+        name_x = imgui.get_cursor_screen_pos().x - self.x0 + imgui.get_font_size() + 2 * imgui.get_style().frame_padding.x
+        self.measure(0, name_x + imgui.calc_text_size(n.name).x)
         group = n.kind == "group"
         flags = NODE_FLAGS | (0 if group else LEAF_FLAGS)
         if n.path == self.selected:
@@ -114,15 +124,22 @@ class Tree:
             self.reveal = None
         imgui.table_next_column()
         if n.is_link:
-            imgui.text_disabled(f"-> {n.target}")
+            self.text(1, f"-> {n.target}")
             if imgui.is_item_hovered():
                 tooltip(n.target)
         elif n.shape is not None or n.kind == "dataset":
-            imgui.text_disabled(M.fmt_shape(n.shape))
+            self.text(1, M.fmt_shape(n.shape))
         imgui.table_next_column()
-        imgui.text_disabled({"soft": "soft link", "external": "external link"}.get(n.kind, n.dtype))
+        self.text(2, {"soft": "soft link", "external": "external link"}.get(n.kind, n.dtype))
         if opened and group:
             for child in self.children(n.path):
                 if self.kept is None or child.path in self.kept:
                     self.row(child)
             imgui.tree_pop()
+
+    def measure(self, column: int, width: float) -> None:
+        self.widths[column] = max(self.widths[column], width)
+
+    def text(self, column: int, text: str) -> None:
+        self.measure(column, imgui.calc_text_size(text).x)
+        imgui.text_disabled(text)

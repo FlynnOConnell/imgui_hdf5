@@ -27,7 +27,6 @@ except ImportError:  # optional: pip install imgui_hdf5[debug]
 
 TITLE_WINDOW = "imgui_hdf5"
 SIZE_WINDOW = (1500, 1000)
-WIDTH_RAIL_EM = 30
 IMPLOT_PADDINGS = (
     "plot_padding", "label_padding", "legend_padding", "legend_inner_padding", "legend_spacing",
     "mouse_pos_padding", "annotation_padding", "major_tick_len", "minor_tick_len",
@@ -58,6 +57,7 @@ class App:
         self.scale = config.clamp(scale)
         self.scale_applied = 1.0
         self.scale_edit: Optional[float] = None
+        self.rail_width: Optional[float] = None  # None fits the tree; set by dragging the splitter
         self.tools = DebugTools.default(target=self, title="Viewer state") if DebugTools else None
         if path:
             self.open(path)
@@ -127,11 +127,16 @@ class App:
         self.scale_keys()
         self.apply_scale()
         em = imgui.get_font_size()
-        rail = min(max(0.3 * imgui.get_content_region_avail().x, 20 * em), WIDTH_RAIL_EM * em)
-        if imgui.begin_child("rail", imgui.ImVec2(rail, 0), imgui.ChildFlags_.borders | imgui.ChildFlags_.resize_x):
+        avail = imgui.get_content_region_avail()
+        if self.rail_width is None:
+            need = self.tree.width + 2 * imgui.get_style().window_padding.x if self.tree is not None else 0
+            rail = min(max(need, 20 * em), 0.5 * avail.x)
+        else:
+            rail = min(max(self.rail_width, 10 * em), 0.7 * avail.x)
+        if imgui.begin_child("rail", imgui.ImVec2(rail, 0), imgui.ChildFlags_.borders):
             self.draw_rail()
         imgui.end_child()
-        imgui.same_line()
+        self.splitter(rail, avail.y)
         if imgui.begin_child("page", imgui.ImVec2(0, 0)):
             if self.error:
                 imgui.text_colored(P.ERROR, self.error)
@@ -147,6 +152,18 @@ class App:
             imgui.end()
         if self.tools:
             self.tools.render()
+
+    def splitter(self, rail: float, height: float) -> None:
+        """Drag to resize the rail; double-click to fit it to the tree again."""
+        imgui.same_line(0, 0)
+        imgui.invisible_button("##splitter", imgui.ImVec2(0.5 * imgui.get_font_size(), max(height, 1)))
+        if imgui.is_item_hovered() or imgui.is_item_active():
+            imgui.set_mouse_cursor(imgui.MouseCursor_.resize_ew)
+        if imgui.is_item_active():
+            self.rail_width = rail + imgui.get_io().mouse_delta.x
+        if imgui.is_item_hovered() and imgui.is_mouse_double_clicked(imgui.MouseButton_.left):
+            self.rail_width = None
+        imgui.same_line(0, 0)
 
     def draw_menus(self) -> None:
         if imgui.begin_menu("File"):

@@ -71,6 +71,8 @@ def test_every_node_and_view_renders(sample, masknmf, tmp_path, monkeypatch):
         lambda a: setattr(a.page.views["/sparse_csr"], "table", True),
         lambda a: a.tree.set_filter("str"),
         lambda a: a.tree.set_filter(""),
+        lambda a: setattr(a, "rail_width", 5.0),
+        lambda a: setattr(a, "rail_width", None),
         lambda a: setattr(a, "show_dialog", True),
         lambda a: errors.update({p: v.errors for p, v in a.page.views.items() if v.errors}),
         lambda a: a.open(str(masknmf)),
