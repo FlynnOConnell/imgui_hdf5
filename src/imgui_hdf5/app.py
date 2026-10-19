@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence
 
+import h5py
 from imgui_bundle import hello_imgui, imgui, immapp, implot
 from imgui_data_loader import FileDialog, FileDialogConfig
 
@@ -62,6 +63,13 @@ class App:
             self.open(path)
 
     def open(self, path: str) -> None:
+        path = str(Path(path).expanduser().resolve())
+        if not Path(path).is_file():
+            self.error = f"Cannot open {path}: " + ("a directory" if Path(path).is_dir() else "no such file")
+            return
+        if not h5py.is_hdf5(path):
+            self.error = f"Cannot open {path}: not an HDF5 file"
+            return
         try:
             f = M.open_file(path)
         except Exception as e:
