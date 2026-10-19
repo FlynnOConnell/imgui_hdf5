@@ -6,6 +6,7 @@ With imgui_debugger installed (the debug extra), a Debug menu opens a live inspe
 
 import argparse
 import ctypes
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional, Sequence
@@ -37,6 +38,11 @@ IMPLOT_PADDINGS = (
 FILETYPES = [FileType("HDF5", "*.h5 *.hdf5 *.hdf *.he5 *.nc *.h5ad"), FileType("All files", "*")]
 GLFW_LIBRARIES = ("libglfw.so.3", "libglfw.so", "libglfw.3.dylib", "libglfw.dylib", "glfw3.dll")
 DROP_CALLBACK = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_char_p))
+PICKERS = ("zenity", "kdialog", "matedialog", "qarma")  # portable_file_dialogs on Linux runs one of these
+
+
+def has_picker() -> bool:
+    return not sys.platform.startswith("linux") or any(shutil.which(name) for name in PICKERS)
 
 
 class App:
@@ -51,11 +57,13 @@ class App:
         self.dropped: list[str] = []
         self.drop_callback = None  # kept so ctypes does not free it
         self.show_dialog = False
+        self.typed = ""
+        self.picker = has_picker()
         self.dialog = FileDialog(FileDialogConfig(
             title="Open an HDF5 file",
             subtitle="Files open read-only.",
             buttons=[ButtonSpec("Open file", PickKind.OPEN_FILE, icon=fa.ICON_FA_FOLDER_OPEN, filetypes=FILETYPES)],
-            body_draw=self.draw_recent,
+            body_draw=self.draw_dialog_body,
             show_options_button=False,
             show_quit_button=False,
             quit_on_escape=False,
@@ -195,12 +203,25 @@ class App:
         if self.tools:
             self.tools.draw_menu()
 
-    def draw_recent(self) -> None:
+    def draw_dialog_body(self) -> None:
+        if not self.picker:
+            imgui.text_colored(P.WARN, "No file picker found. Install zenity or kdialog, or type a path.")
+        imgui.separator_text("Path")
+        imgui.set_next_item_width(-5 * imgui.get_font_size())
+        entered, self.typed = imgui.input_text_with_hint(
+            "##typed", "/path/to/file.h5", self.typed, imgui.InputTextFlags_.enter_returns_true,
+        )
+        imgui.same_line()
+        if (imgui.button("Open") or entered) and self.typed.strip():
+            self.open(str(Path(self.typed.strip()).expanduser()))
+            if self.file is not None:
+                self.typed, self.show_dialog = "", False
         imgui.separator_text("Recent files")
         recent = config.recent()
         for i, path in enumerate(recent):
             if imgui.selectable(f"{Path(path).name}##recent{i}", False)[0]:
                 self.open(path)
+                self.show_dialog = self.show_dialog and self.file is None
             imgui.same_line()
             imgui.text_disabled(str(Path(path).parent))
         if not recent:
